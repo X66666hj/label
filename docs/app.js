@@ -54,8 +54,9 @@ function getCurrent() {
 
 function updateStats() {
   els.total.textContent = state.data.length;
-  const done = Object.values(state.annotations).filter((v) => v?.selected?.length === 5)
-    .length;
+  const done = Object.values(state.annotations).filter(
+    (v) => v?.selected?.length === 5 || v?.null === true
+  ).length;
   els.done.textContent = done;
   els.category.textContent = els.categorySelect.value;
   els.index.textContent = state.filtered.length ? state.index + 1 : 0;
