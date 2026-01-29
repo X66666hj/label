@@ -79,11 +79,12 @@ function render() {
   const saved = state.annotations[row.id]?.selected || [];
   els.items.innerHTML = "";
   row.items.forEach((item) => {
-    const wrap = document.createElement("label");
+    const wrap = document.createElement("div");
     wrap.className = "item";
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
     checkbox.checked = saved.includes(item.id);
+    const rankIndex = saved.indexOf(item.id);
     const content = document.createElement("div");
     const title = document.createElement("div");
     title.className = "item__title";
@@ -96,6 +97,54 @@ function render() {
     wrap.appendChild(checkbox);
     wrap.appendChild(content);
     if (checkbox.checked) wrap.classList.add("selected");
+
+    if (rankIndex >= 0) {
+      const badge = document.createElement("span");
+      badge.className = "rank";
+      badge.textContent = String(rankIndex + 1);
+      wrap.appendChild(badge);
+
+      const controls = document.createElement("div");
+      controls.className = "item__controls";
+      const up = document.createElement("button");
+      up.type = "button";
+      up.className = "mini";
+      up.textContent = "↑";
+      const down = document.createElement("button");
+      down.type = "button";
+      down.className = "mini";
+      down.textContent = "↓";
+
+      up.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const current = state.annotations[row.id]?.selected || [];
+        const idx = current.indexOf(item.id);
+        if (idx > 0) {
+          [current[idx - 1], current[idx]] = [current[idx], current[idx - 1]];
+          state.annotations[row.id] = { selected: current, category: row.category };
+          saveAnnotations();
+          render();
+        }
+      });
+
+      down.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const current = state.annotations[row.id]?.selected || [];
+        const idx = current.indexOf(item.id);
+        if (idx >= 0 && idx < current.length - 1) {
+          [current[idx + 1], current[idx]] = [current[idx], current[idx + 1]];
+          state.annotations[row.id] = { selected: current, category: row.category };
+          saveAnnotations();
+          render();
+        }
+      });
+
+      controls.appendChild(up);
+      controls.appendChild(down);
+      wrap.appendChild(controls);
+    }
 
     checkbox.addEventListener("change", () => {
       const current = state.annotations[row.id]?.selected || [];
