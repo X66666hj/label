@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Top5 Selector</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="hero">
+        <div class="hero__title">
+          <div class="kicker">Top5 Annotation</div>
+          <h1>Pick the best 5 items from LLM Top20</h1>
+          <p>
+            Local-only annotations. Data stays in your browser until you export JSON/CSV.
+          </p>
+        </div>
+        <div class="hero__stats">
+          <div class="stat">
+            <div class="stat__label">Records</div>
+            <div class="stat__value" id="stat-total">0</div>
+          </div>
+          <div class="stat">
+            <div class="stat__label">Done</div>
+            <div class="stat__value" id="stat-done">0</div>
+          </div>
+          <div class="stat">
+            <div class="stat__label">Category</div>
+            <div class="stat__value" id="stat-category">—</div>
+          </div>
+        </div>
+      </header>
+
+      <section class="toolbar">
+        <div class="control">
+          <label for="category">Category</label>
+          <select id="category"></select>
+        </div>
+        <div class="control">
+          <label for="search">Search</label>
+          <input id="search" type="search" placeholder="search conversation..." />
+        </div>
+        <div class="control control--inline">
+          <button id="prev">Prev</button>
+          <button id="next">Next</button>
+          <div class="index">
+            <span id="index">0</span>/<span id="index-total">0</span>
+          </div>
+        </div>
+        <div class="control control--inline">
+          <button id="clear">Clear Selection</button>
+          <button id="export-json">Export JSON</button>
+          <button id="export-csv">Export CSV</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card__meta">
+          <div class="chip" id="record-id">—</div>
+          <div class="chip" id="record-category">—</div>
+        </div>
+        <div class="card__content">
+          <div class="pane">
+            <h2>Conversation</h2>
+            <pre id="conversation"></pre>
+          </div>
+          <div class="pane">
+            <h2>Top20 Items (select 5)</h2>
+            <div id="items" class="items"></div>
+            <div class="hint" id="selection-hint">Pick exactly 5 items.</div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <footer class="foot">
+      <div>Data source: LLM Top20 from BM25 Top100 candidates</div>
+      <div>Build: GitHub Pages static site</div>
+    </footer>
+
+    <script src="app.js"></script>
+  </body>
+</html>
