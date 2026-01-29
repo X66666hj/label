@@ -77,7 +77,38 @@ function render() {
   els.conversation.textContent = row.conversation_text || "";
 
   const saved = state.annotations[row.id]?.selected || [];
+  const isNull = state.annotations[row.id]?.null === true;
   els.items.innerHTML = "";
+
+  const nullWrap = document.createElement("div");
+  nullWrap.className = "item null-item";
+  const nullCheckbox = document.createElement("input");
+  nullCheckbox.type = "checkbox";
+  nullCheckbox.checked = isNull;
+  const nullContent = document.createElement("div");
+  const nullTitle = document.createElement("div");
+  nullTitle.className = "item__title";
+  nullTitle.textContent = "NULL (no suitable recommendation)";
+  const nullMeta = document.createElement("div");
+  nullMeta.className = "item__id";
+  nullMeta.textContent = "Select to mark this conversation as not recommendable.";
+  nullContent.appendChild(nullTitle);
+  nullContent.appendChild(nullMeta);
+  nullWrap.appendChild(nullCheckbox);
+  nullWrap.appendChild(nullContent);
+  if (isNull) nullWrap.classList.add("selected");
+  els.items.appendChild(nullWrap);
+
+  nullCheckbox.addEventListener("change", () => {
+    if (nullCheckbox.checked) {
+      state.annotations[row.id] = { selected: [], category: row.category, null: true };
+    } else {
+      state.annotations[row.id] = { selected: [], category: row.category, null: false };
+    }
+    saveAnnotations();
+    render();
+  });
+
   row.items.forEach((item) => {
     const wrap = document.createElement("div");
     wrap.className = "item";
@@ -147,6 +178,9 @@ function render() {
     }
 
     checkbox.addEventListener("change", () => {
+      if (state.annotations[row.id]?.null) {
+        state.annotations[row.id] = { selected: [], category: row.category, null: false };
+      }
       const current = state.annotations[row.id]?.selected || [];
       if (checkbox.checked) {
         if (current.length >= 5) {
@@ -172,6 +206,9 @@ function render() {
   if (selectedCount === 5) {
     els.hint.textContent = "Selection complete.";
     els.hint.style.color = "var(--accent-2)";
+  } else if (state.annotations[row.id]?.null) {
+    els.hint.textContent = "Marked as NULL (no recommendation).";
+    els.hint.style.color = "var(--danger)";
   } else {
     els.hint.textContent = `Pick ${5 - selectedCount} more.`;
     els.hint.style.color = "var(--muted)";
@@ -191,9 +228,14 @@ function exportJSON() {
 }
 
 function exportCSV() {
-  const rows = [["record_id", "category", "item_ids"]];
+  const rows = [["record_id", "category", "is_null", "item_ids"]];
   Object.entries(state.annotations).forEach(([key, value]) => {
-    rows.push([key, value.category || "", (value.selected || []).join("|")]);
+    rows.push([
+      key,
+      value.category || "",
+      value.null ? "1" : "0",
+      (value.selected || []).join("|"),
+    ]);
   });
   const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
     .join("\n");
