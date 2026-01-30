@@ -147,6 +147,12 @@ button:active {
   color: var(--muted);
 }
 
+.upload-status {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 11px;
+  color: var(--muted);
+}
+
 .card {
   margin-top: 24px;
   background: var(--panel);

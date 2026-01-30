@@ -18,9 +18,7 @@
         <div class="hero__title">
           <div class="kicker">Top5 Annotation</div>
           <h1>Pick the best 5 items from LLM Top20</h1>
-          <p>
-            Local-only annotations. Data stays in your browser until you export JSON/CSV.
-          </p>
+          <p>Local-first annotations. Data stays in your browser until you export or upload.</p>
         </div>
         <div class="hero__stats">
           <div class="stat">
@@ -33,7 +31,7 @@
           </div>
           <div class="stat">
             <div class="stat__label">Category</div>
-            <div class="stat__value" id="stat-category">—</div>
+            <div class="stat__value" id="stat-category">-</div>
           </div>
         </div>
       </header>
@@ -58,13 +56,15 @@
           <button id="clear">Clear Selection</button>
           <button id="export-json">Export JSON</button>
           <button id="export-csv">Export CSV</button>
+          <button id="upload">Upload</button>
+          <span id="upload-status" class="upload-status"></span>
         </div>
       </section>
 
       <section class="card">
         <div class="card__meta">
-          <div class="chip" id="record-id">—</div>
-          <div class="chip" id="record-category">—</div>
+          <div class="chip" id="record-id">-</div>
+          <div class="chip" id="record-category">-</div>
         </div>
         <div class="card__content">
           <div class="pane">
@@ -89,6 +89,7 @@
       <div>Build: GitHub Pages static site</div>
     </footer>
 
+    <script src="config.js"></script>
     <script src="app.js"></script>
   </body>
 </html>
