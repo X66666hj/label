@@ -58,12 +58,33 @@ def main() -> None:
         default=None,
         help="Optional max records to include (for quick demo).",
     )
+    parser.add_argument(
+        "--split-threshold",
+        type=int,
+        default=200,
+        help="If a category has more than this many records, split into parts.",
+    )
+    parser.add_argument(
+        "--split-parts",
+        type=int,
+        default=8,
+        help="Number of parts to split large categories into.",
+    )
     args = parser.parse_args()
 
     reco_dir = Path(args.reco_dir)
     chat_dir = Path(args.chat_dir)
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # First pass: count records per category to determine splitting.
+    category_counts: dict[str, int] = {}
+    for reco_path in sorted(reco_dir.glob("top20_*.jsonl")):
+        category = reco_path.stem.replace("top20_", "")
+        count = 0
+        for _ in _iter_jsonl(reco_path):
+            count += 1
+        category_counts[category] = count
 
     records = []
     total = 0
@@ -72,6 +93,12 @@ def main() -> None:
         chat_path = chat_dir / f"{category}.jsonl"
         if not chat_path.exists():
             continue
+
+        total_in_category = category_counts.get(category, 0)
+        split = total_in_category > args.split_threshold
+        chunk_size = 0
+        if split:
+            chunk_size = (total_in_category + args.split_parts - 1) // args.split_parts
 
         chat_rows = list(_iter_jsonl(chat_path))
         for idx, reco_row in enumerate(_iter_jsonl(reco_path), start=1):
@@ -86,9 +113,18 @@ def main() -> None:
                 cleaned_items.append(
                     {"id": it.get("id", ""), "title": it.get("title", "")}
                 )
+            if split and chunk_size > 0:
+                part = (idx - 1) // chunk_size + 1
+                if part > args.split_parts:
+                    part = args.split_parts
+                category_label = f"{category}_{part}"
+            else:
+                category_label = category
+
             record = {
                 "id": f"{category}:{idx}",
-                "category": category,
+                "category": category_label,
+                "base_category": category,
                 "conversation_index": idx,
                 "conversation": convo,
                 "conversation_text": _conversation_to_text(convo),
