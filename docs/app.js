@@ -75,7 +75,16 @@ function render() {
   }
   els.recordId.textContent = row.id;
   els.recordCategory.textContent = row.category;
-  els.conversation.textContent = row.conversation_text || "";
+  if (Array.isArray(row.conversation)) {
+    const lines = row.conversation.map((msg) => {
+      const role = String(msg.role || "").toUpperCase();
+      const content = String(msg.content || "");
+      return `${role}: ${content}`;
+    });
+    els.conversation.textContent = lines.join("\n\n");
+  } else {
+    els.conversation.textContent = row.conversation_text || "";
+  }
 
   const saved = state.annotations[row.id]?.selected || [];
   const isNull = state.annotations[row.id]?.null === true;
