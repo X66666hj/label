@@ -62,13 +62,7 @@ def main() -> None:
         "--split-threshold",
         type=int,
         default=200,
-        help="If a category has more than this many records, split into parts.",
-    )
-    parser.add_argument(
-        "--split-parts",
-        type=int,
-        default=8,
-        help="Number of parts to split large categories into.",
+        help="If a category has more than this many records, split into chunks of this size.",
     )
     args = parser.parse_args()
 
@@ -96,9 +90,7 @@ def main() -> None:
 
         total_in_category = category_counts.get(category, 0)
         split = total_in_category > args.split_threshold
-        chunk_size = 0
-        if split:
-            chunk_size = (total_in_category + args.split_parts - 1) // args.split_parts
+        chunk_size = args.split_threshold if split else 0
 
         chat_rows = list(_iter_jsonl(chat_path))
         for idx, reco_row in enumerate(_iter_jsonl(reco_path), start=1):
@@ -115,8 +107,6 @@ def main() -> None:
                 )
             if split and chunk_size > 0:
                 part = (idx - 1) // chunk_size + 1
-                if part > args.split_parts:
-                    part = args.split_parts
                 category_label = f"{category}_{part}"
             else:
                 category_label = category
