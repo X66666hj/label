@@ -18,6 +18,7 @@ const els = {
   categorySelect: document.getElementById("category"),
   search: document.getElementById("search"),
   hint: document.getElementById("selection-hint"),
+  reason: document.getElementById("reason"),
 };
 
 function loadAnnotations() {
@@ -63,18 +64,14 @@ function updateStats() {
   els.indexTotal.textContent = state.filtered.length;
 }
 
-function render() {
-  const row = getCurrent();
-  updateStats();
-  if (!row) {
-    els.recordId.textContent = "—";
-    els.recordCategory.textContent = "—";
-    els.conversation.textContent = "No records.";
-    els.items.innerHTML = "";
-    return;
+function ensureEntry(row) {
+  if (!state.annotations[row.id]) {
+    state.annotations[row.id] = { selected: [], category: row.category, null: false, reason: "" };
   }
-  els.recordId.textContent = row.id;
-  els.recordCategory.textContent = row.category;
+  return state.annotations[row.id];
+}
+
+function renderConversation(row) {
   if (Array.isArray(row.conversation)) {
     els.conversation.innerHTML = "";
     row.conversation.forEach((msg) => {
@@ -95,16 +92,32 @@ function render() {
   } else {
     els.conversation.textContent = row.conversation_text || "";
   }
+}
 
-  const saved = state.annotations[row.id]?.selected || [];
-  const isNull = state.annotations[row.id]?.null === true;
+function render() {
+  const row = getCurrent();
+  updateStats();
+  if (!row) {
+    els.recordId.textContent = "-";
+    els.recordCategory.textContent = "-";
+    els.conversation.textContent = "No records.";
+    els.items.innerHTML = "";
+    els.reason.value = "";
+    return;
+  }
+  els.recordId.textContent = row.id;
+  els.recordCategory.textContent = row.category;
+  renderConversation(row);
+
+  const entry = ensureEntry(row);
+  els.reason.value = entry.reason || "";
   els.items.innerHTML = "";
 
   const nullWrap = document.createElement("div");
   nullWrap.className = "item null-item";
   const nullCheckbox = document.createElement("input");
   nullCheckbox.type = "checkbox";
-  nullCheckbox.checked = isNull;
+  nullCheckbox.checked = entry.null === true;
   const nullContent = document.createElement("div");
   const nullTitle = document.createElement("div");
   nullTitle.className = "item__title";
@@ -116,15 +129,13 @@ function render() {
   nullContent.appendChild(nullMeta);
   nullWrap.appendChild(nullCheckbox);
   nullWrap.appendChild(nullContent);
-  if (isNull) nullWrap.classList.add("selected");
+  if (nullCheckbox.checked) nullWrap.classList.add("selected");
   els.items.appendChild(nullWrap);
 
   nullCheckbox.addEventListener("change", () => {
-    if (nullCheckbox.checked) {
-      state.annotations[row.id] = { selected: [], category: row.category, null: true };
-    } else {
-      state.annotations[row.id] = { selected: [], category: row.category, null: false };
-    }
+    entry.null = nullCheckbox.checked;
+    if (entry.null) entry.selected = [];
+    state.annotations[row.id] = entry;
     saveAnnotations();
     render();
   });
@@ -134,8 +145,8 @@ function render() {
     wrap.className = "item";
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
-    checkbox.checked = saved.includes(item.id);
-    const rankIndex = saved.indexOf(item.id);
+    checkbox.checked = entry.selected.includes(item.id);
+    const rankIndex = entry.selected.indexOf(item.id);
     const content = document.createElement("div");
     const title = document.createElement("div");
     title.className = "item__title";
@@ -160,20 +171,22 @@ function render() {
       const up = document.createElement("button");
       up.type = "button";
       up.className = "mini";
-      up.textContent = "↑";
+      up.textContent = "Up";
       const down = document.createElement("button");
       down.type = "button";
       down.className = "mini";
-      down.textContent = "↓";
+      down.textContent = "Down";
 
       up.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
-        const current = state.annotations[row.id]?.selected || [];
-        const idx = current.indexOf(item.id);
+        const idx = entry.selected.indexOf(item.id);
         if (idx > 0) {
-          [current[idx - 1], current[idx]] = [current[idx], current[idx - 1]];
-          state.annotations[row.id] = { selected: current, category: row.category };
+          [entry.selected[idx - 1], entry.selected[idx]] = [
+            entry.selected[idx],
+            entry.selected[idx - 1],
+          ];
+          state.annotations[row.id] = entry;
           saveAnnotations();
           render();
         }
@@ -182,11 +195,13 @@ function render() {
       down.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
-        const current = state.annotations[row.id]?.selected || [];
-        const idx = current.indexOf(item.id);
-        if (idx >= 0 && idx < current.length - 1) {
-          [current[idx + 1], current[idx]] = [current[idx], current[idx + 1]];
-          state.annotations[row.id] = { selected: current, category: row.category };
+        const idx = entry.selected.indexOf(item.id);
+        if (idx >= 0 && idx < entry.selected.length - 1) {
+          [entry.selected[idx + 1], entry.selected[idx]] = [
+            entry.selected[idx],
+            entry.selected[idx + 1],
+          ];
+          state.annotations[row.id] = entry;
           saveAnnotations();
           render();
         }
@@ -198,35 +213,33 @@ function render() {
     }
 
     checkbox.addEventListener("change", () => {
-      if (state.annotations[row.id]?.null) {
-        state.annotations[row.id] = { selected: [], category: row.category, null: false };
-      }
-      const current = state.annotations[row.id]?.selected || [];
+      if (entry.null) entry.null = false;
       if (checkbox.checked) {
-        if (current.length >= 5) {
+        if (entry.selected.length >= 5) {
           checkbox.checked = false;
           return;
         }
-        current.push(item.id);
+        entry.selected.push(item.id);
       } else {
-        const idx = current.indexOf(item.id);
-        if (idx >= 0) current.splice(idx, 1);
+        const idx = entry.selected.indexOf(item.id);
+        if (idx >= 0) entry.selected.splice(idx, 1);
       }
-      state.annotations[row.id] = {
-        selected: current,
-        category: row.category,
-      };
+      state.annotations[row.id] = entry;
       saveAnnotations();
       render();
     });
     els.items.appendChild(wrap);
   });
 
-  const selectedCount = saved.length;
-  if (selectedCount === 5) {
+  const selectedCount = entry.selected.length;
+  const hasReason = Boolean((entry.reason || "").trim());
+  if ((selectedCount === 5 || entry.null) && !hasReason) {
+    els.hint.textContent = "Reason required.";
+    els.hint.style.color = "var(--danger)";
+  } else if (selectedCount === 5) {
     els.hint.textContent = "Selection complete.";
     els.hint.style.color = "var(--accent-2)";
-  } else if (state.annotations[row.id]?.null) {
+  } else if (entry.null) {
     els.hint.textContent = "Marked as NULL (no recommendation).";
     els.hint.style.color = "var(--danger)";
   } else {
@@ -248,16 +261,18 @@ function exportJSON() {
 }
 
 function exportCSV() {
-  const rows = [["record_id", "category", "is_null", "item_ids"]];
+  const rows = [["record_id", "category", "is_null", "item_ids", "reason"]];
   Object.entries(state.annotations).forEach(([key, value]) => {
     rows.push([
       key,
       value.category || "",
       value.null ? "1" : "0",
       (value.selected || []).join("|"),
+      (value.reason || "").replace(/\r?\n/g, " "),
     ]);
   });
-  const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
+  const csv = rows
+    .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
     .join("\n");
   const blob = new Blob([csv], { type: "text/csv" });
   const url = URL.createObjectURL(blob);
@@ -284,7 +299,10 @@ function bind() {
   document.getElementById("clear").addEventListener("click", () => {
     const row = getCurrent();
     if (!row) return;
-    state.annotations[row.id] = { selected: [], category: row.category };
+    const entry = ensureEntry(row);
+    entry.selected = [];
+    entry.null = false;
+    state.annotations[row.id] = entry;
     saveAnnotations();
     render();
   });
@@ -294,6 +312,15 @@ function bind() {
   els.search.addEventListener("input", () => {
     clearTimeout(window.__searchTimer);
     window.__searchTimer = setTimeout(setFiltered, 200);
+  });
+  els.reason.addEventListener("input", () => {
+    const row = getCurrent();
+    if (!row) return;
+    const entry = ensureEntry(row);
+    entry.reason = els.reason.value;
+    state.annotations[row.id] = entry;
+    saveAnnotations();
+    render();
   });
 }
 

@@ -188,6 +188,24 @@ button:active {
   font-size: 16px;
 }
 
+.pane--reason {
+  margin-top: 18px;
+}
+
+textarea {
+  width: 100%;
+  min-height: 120px;
+  background: #0f1722;
+  color: var(--ink);
+  border: 1px solid #243246;
+  border-radius: 12px;
+  padding: 12px;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 12.5px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
 .conversation {
   display: flex;
   flex-direction: column;
