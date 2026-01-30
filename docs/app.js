@@ -76,12 +76,22 @@ function render() {
   els.recordId.textContent = row.id;
   els.recordCategory.textContent = row.category;
   if (Array.isArray(row.conversation)) {
-    const lines = row.conversation.map((msg) => {
-      const role = String(msg.role || "").toUpperCase();
+    els.conversation.innerHTML = "";
+    row.conversation.forEach((msg) => {
+      const role = String(msg.role || "").toLowerCase();
       const content = String(msg.content || "");
-      return `${role}: ${content}`;
+      const bubble = document.createElement("div");
+      bubble.className = `bubble bubble--${role || "unknown"}`;
+      const tag = document.createElement("div");
+      tag.className = "bubble__role";
+      tag.textContent = role ? role.toUpperCase() : "UNKNOWN";
+      const body = document.createElement("div");
+      body.className = "bubble__text";
+      body.textContent = content;
+      bubble.appendChild(tag);
+      bubble.appendChild(body);
+      els.conversation.appendChild(bubble);
     });
-    els.conversation.textContent = lines.join("\n\n");
   } else {
     els.conversation.textContent = row.conversation_text || "";
   }
