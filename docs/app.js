@@ -19,10 +19,7 @@ const els = {
   search: document.getElementById("search"),
   hint: document.getElementById("selection-hint"),
   reason: document.getElementById("reason"),
-  uploadStatus: document.getElementById("upload-status"),
 };
-
-let dataById = new Map();
 
 function loadAnnotations() {
   try {
@@ -263,80 +260,6 @@ function exportJSON() {
   URL.revokeObjectURL(url);
 }
 
-function exportCSV() {
-  const rows = [["record_id", "category", "is_null", "item_ids", "reason"]];
-  Object.entries(state.annotations).forEach(([key, value]) => {
-    rows.push([
-      key,
-      value.category || "",
-      value.null ? "1" : "0",
-      (value.selected || []).join("|"),
-      (value.reason || "").replace(/\r?\n/g, " "),
-    ]);
-  });
-  const csv = rows
-    .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
-    .join("\n");
-  const blob = new Blob([csv], { type: "text/csv" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "top5_annotations.csv";
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-function buildUploadPayload() {
-  const records = [];
-  Object.entries(state.annotations).forEach(([key, value]) => {
-    const done = value?.selected?.length === 5 || value?.null === true;
-    const reason = (value?.reason || "").trim();
-    if (!done || !reason) return;
-    const full = dataById.get(key);
-    records.push({
-      record_id: key,
-      category: value.category || full?.category || "",
-      is_null: value.null ? true : false,
-      item_ids: value.selected || [],
-      reason,
-      conversation: full?.conversation || null,
-      items: full?.items || [],
-      conversation_text: full?.conversation_text || "",
-      timestamp: new Date().toISOString(),
-    });
-  });
-  return { records };
-}
-
-async function upload() {
-  const url = window.CONFIG?.GOOGLE_SCRIPT_URL || "";
-  if (!url) {
-    els.uploadStatus.textContent = "Missing script URL";
-    return;
-  }
-  const payload = buildUploadPayload();
-  if (!payload.records.length) {
-    els.uploadStatus.textContent = "No completed records to upload";
-    return;
-  }
-  els.uploadStatus.textContent = "Uploading...";
-  try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    const text = await res.text();
-    els.uploadStatus.textContent = res.ok ? "Upload OK" : `Upload failed (${res.status})`;
-    if (!res.ok) {
-      console.error(text);
-    }
-  } catch (err) {
-    els.uploadStatus.textContent = "Upload error";
-    console.error(err);
-  }
-}
-
 function bind() {
   document.getElementById("prev").addEventListener("click", () => {
     if (state.index > 0) {
@@ -361,8 +284,6 @@ function bind() {
     render();
   });
   document.getElementById("export-json").addEventListener("click", exportJSON);
-  document.getElementById("export-csv").addEventListener("click", exportCSV);
-  document.getElementById("upload").addEventListener("click", upload);
   els.categorySelect.addEventListener("change", setFiltered);
   els.search.addEventListener("input", () => {
     clearTimeout(window.__searchTimer);
@@ -384,7 +305,6 @@ async function init() {
   const res = await fetch("data.json");
   const data = await res.json();
   state.data = data;
-  dataById = new Map(data.map((d) => [d.id, d]));
   const categories = ["All", ...new Set(data.map((d) => d.category))].sort();
   categories.forEach((c) => {
     const opt = document.createElement("option");
