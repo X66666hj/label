@@ -1,0 +1,19 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# IDE
+.idea/
+.vscode/
+*.docx
+~$*
+
+# Large data (optional: remove dataset/ if you want to track small samples)
+# dataset/

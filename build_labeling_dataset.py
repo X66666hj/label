@@ -33,19 +33,78 @@ def _conversation_to_text(conv) -> str:
     return json.dumps(conv, ensure_ascii=True)
 
 
+def _records_from_merged_dir(
+    merged_dir: Path,
+    out_path: Path,
+    max_items: int | None,
+    split_threshold: int,
+) -> None:
+    """Build records from merged top20_*.jsonl (each row has conversation + llm_top20_items)."""
+    records = []
+    total = 0
+    for reco_path in sorted(merged_dir.glob("top20_*.jsonl")):
+        category = reco_path.stem.replace("top20_", "")
+        category_count = 0
+        for row in _iter_jsonl(reco_path):
+            category_count += 1
+        split = category_count > split_threshold
+        chunk_size = split_threshold if split else 0
+
+        for idx, row in enumerate(_iter_jsonl(reco_path), start=1):
+            convo = row.get("conversation", [])
+            items = row.get("llm_top20_items") or []
+            cleaned_items = []
+            for it in items:
+                if not isinstance(it, dict):
+                    continue
+                cleaned_items.append(
+                    {"id": it.get("id", ""), "title": it.get("title", "")}
+                )
+            if split and chunk_size > 0:
+                part = (idx - 1) // chunk_size + 1
+                category_label = f"{category}_{part}"
+            else:
+                category_label = category
+            record = {
+                "id": f"{category}:{idx}",
+                "category": category_label,
+                "base_category": category,
+                "conversation_index": idx,
+                "conversation": convo,
+                "conversation_text": _conversation_to_text(convo),
+                "items": cleaned_items,
+            }
+            records.append(record)
+            total += 1
+            if max_items is not None and total >= max_items:
+                break
+        if max_items is not None and total >= max_items:
+            break
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with out_path.open("w", encoding="utf-8") as f:
+        json.dump(records, f, ensure_ascii=False)
+    print(f"wrote {len(records)} records to {out_path}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Build a compact labeling dataset for the GitHub Pages annotator."
     )
     parser.add_argument(
+        "--merged-dir",
+        default="dataset/reco_by_category_no_code_pool_with_conversation_regen",
+        help="Merged dir with top20_*.jsonl (each row: conversation + llm_top20_items). Used by default.",
+    )
+    parser.add_argument(
         "--reco-dir",
         default="dataset/reco_by_category",
-        help="Directory with top20_<Category>.jsonl outputs.",
+        help="Directory with top20_<Category>.jsonl (used only when --merged-dir is empty).",
     )
     parser.add_argument(
         "--chat-dir",
         default="dataset/chat/by_category",
-        help="Directory with per-category conversations.",
+        help="Directory with per-category conversations (used only when --merged-dir is empty).",
     )
     parser.add_argument(
         "--out",
@@ -66,10 +125,23 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    out_path = Path(args.out)
+
+    if args.merged_dir and Path(args.merged_dir).exists():
+        _records_from_merged_dir(
+            Path(args.merged_dir),
+            out_path,
+            args.max_items,
+            args.split_threshold,
+        )
+        return
+
     reco_dir = Path(args.reco_dir)
     chat_dir = Path(args.chat_dir)
-    out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if not reco_dir.exists():
+        raise SystemExit(f"Reco dir not found: {reco_dir}")
 
     # First pass: count records per category to determine splitting.
     category_counts: dict[str, int] = {}
